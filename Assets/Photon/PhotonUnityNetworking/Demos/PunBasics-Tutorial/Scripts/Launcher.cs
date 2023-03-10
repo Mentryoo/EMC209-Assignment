@@ -44,6 +44,10 @@ namespace Photon.Pun.Demo.PunBasics
 		[SerializeField]
 		private LoaderAnime loaderAnime;
 
+		[SerializeField] private GameObject _canvas;
+
+		[SerializeField] private GameObject _playerUIPrefab;
+
 		[SerializeField] private Text _roomStatistics;
 
 		[SerializeField] private RoomInfoContainer _roomContainerPrefab;
@@ -53,6 +57,10 @@ namespace Photon.Pun.Demo.PunBasics
 		[SerializeField] private CreateRoomPanel _createRoomPanel;
 
 		[SerializeField] private InRoomPanel _inRoomPanel;
+		[SerializeField] private GameObject _playerLobbyInstance;
+		private GameObject playerLobbyInstance;
+
+		
 
 		#endregion
 
@@ -184,6 +192,8 @@ namespace Photon.Pun.Demo.PunBasics
 				Debug.Log("PUN Basics Tutorial/Launcher: OnConnectedToMaster() was called by PUN. Now this client is connected and could join a room.\n Calling: PhotonNetwork.JoinRandomRoom(); Operation will fail if no room found");
 			}
 			
+			loaderAnime.StopLoaderAnimation();
+			
 			_lobbyContainerParent.gameObject.SetActive(true);
 			_createRoomPanel.gameObject.SetActive(true);
 
@@ -253,6 +263,7 @@ namespace Photon.Pun.Demo.PunBasics
 	        _lobbyContainerParent.gameObject.SetActive(true);
 	        _createRoomPanel.gameObject.SetActive(true);
 	        _inRoomPanel.gameObject.SetActive(false);
+			Destroy(playerLobbyInstance);
 	        UpdateRoomStatistics();
         }
 
@@ -276,24 +287,49 @@ namespace Photon.Pun.Demo.PunBasics
 		{
 			UpdateRoomStatistics();
 		}
+
+		public override void OnMasterClientSwitched (Player newMasterClient) {
+			UpdateRoomStatistics();
+		}
 		
 		private void UpdateRoomStatistics()
 		{
 			var currentRoom = PhotonNetwork.CurrentRoom;
+			loaderAnime.StopLoaderAnimation();
 			if (currentRoom == null)
 			{
 				_roomStatistics.text = "";
 				return;
 			}
+
+			Destroy(playerLobbyInstance);
+			playerLobbyInstance = Instantiate(_playerLobbyInstance, transform.position, Quaternion.identity);
+			playerLobbyInstance.transform.SetParent(_canvas.transform, false);
 			
 			_roomStatistics.text =
 				$"Name: {currentRoom.Name} \n  {currentRoom.PlayerCount}/{currentRoom.MaxPlayers} \n";
 
+			int i = 0;
 			foreach (var player in PhotonNetwork.CurrentRoom.Players)
 			{
+				
+				
 				_roomStatistics.text += $"\n #{player.Key} | {player.Value.NickName}";
+
+				GameObject playerUI = Instantiate(_playerUIPrefab, transform.position, Quaternion.identity);
+				playerUI.transform.SetParent(playerLobbyInstance.transform, false);
+				print(PhotonNetwork.LocalPlayer.IsMasterClient);
+				PlayerLobbyUI _playerLobbyUI = playerUI.GetComponent<PlayerLobbyUI>();
+				_playerLobbyUI.Initialize(player.Value.NickName, player.Value.ActorNumber.ToString(), player.Value.UserId, player.Value.IsMasterClient, PhotonNetwork.LocalPlayer.IsMasterClient);
+				
+				int playerActorNumber = player.Value.ActorNumber;
+				Button promoteButton = _playerLobbyUI.promoteButton.GetComponent<Button>();
+				promoteButton.onClick.AddListener(_playerLobbyUI.SetNewMaster);
+				promoteButton.onClick.AddListener(UpdateRoomStatistics);
 			}
 		}
+
+		
 
 		#endregion
 		

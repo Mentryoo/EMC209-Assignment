@@ -93,6 +93,7 @@ public class MultiplayerLoader : MonoBehaviourPunCallbacks
     #region Connection
     public override void OnConnectedToMaster()
     {
+        print("a");
         _connectBtn.gameObject.SetActive(false);
         _playBtn.gameObject.SetActive(true);
     }
